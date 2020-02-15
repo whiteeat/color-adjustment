@@ -82,17 +82,52 @@ float3 rgb2hsvRef(float3 rgb)
     return float3(hue, saturation, value);
 }
 
+// This version is broken. Who can fix it? :)
 // https://www.shadertoy.com/view/lsS3Wc
-float3 rgb2hsl(float3 col)
+// float3 rgb2hsl(float3 col)
+// {
+//     float minc = min( col.r, min(col.g, col.b) );
+//     float maxc = max( col.r, max(col.g, col.b) );
+//     float3 mask = step(col.grr,col.rgb) * step(col.bbg,col.rgb);
+//     float E = 1e-10;
+//     float3 h = mask * (float3(0.0,2.0,4.0) + (col.gbr-col.brg)/(maxc-minc + E)) / 6.0;
+//     return float3( frac( 1.0 + h.x + h.y + h.z ),              // H
+//     (maxc-minc)/(1.0-abs(minc+maxc-1.0) + E),  // S
+//     (minc+maxc)*0.5 );                           // L
+// }
+
+float3 rgb2hsl(float3 c)
 {
-    float minc = min( col.r, min(col.g, col.b) );
-    float maxc = max( col.r, max(col.g, col.b) );
-    float3 mask = step(col.grr,col.rgb) * step(col.bbg,col.rgb);
-    float E = 1e-10;
-    float3 h = mask * (float3(0.0,2.0,4.0) + (col.gbr-col.brg)/(maxc-minc + E)) / 6.0;
-    return float3( frac( 1.0 + h.x + h.y + h.z ),              // H
-    (maxc-minc)/(1.0-abs(minc+maxc-1.0) + E),  // S
-    (minc+maxc)*0.5 );                           // L
+    float h = 0.0;
+	float s = 0.0;
+	float l = 0.0;
+	float r = c.r;
+	float g = c.g;
+	float b = c.b;
+	float cMin = min( r, min( g, b ) );
+	float cMax = max( r, max( g, b ) );
+
+	l = ( cMax + cMin ) / 2.0;
+	if ( cMax > cMin ) {
+		float cDelta = cMax - cMin;
+        
+        //s = l < .05 ? cDelta / ( cMax + cMin ) : cDelta / ( 2.0 - ( cMax + cMin ) ); Original
+		s = l < .0 ? cDelta / ( cMax + cMin ) : cDelta / ( 2.0 - ( cMax + cMin ) );
+        
+		if ( r == cMax ) {
+			h = ( g - b ) / cDelta;
+		} else if ( g == cMax ) {
+			h = 2.0 + ( b - r ) / cDelta;
+		} else {
+			h = 4.0 + ( r - g ) / cDelta;
+		}
+
+		if ( h < 0.0) {
+			h += 6.0;
+		}
+		h = h / 6.0;
+	}
+	return float3( h, s, l );
 }
 
 float3 hsl2rgb(float3 c)
