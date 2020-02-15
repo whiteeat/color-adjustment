@@ -13,10 +13,6 @@
         Tags { "RenderType"="Opaque" }
         LOD 100
 
-        // float _Hue;
-        // float _Saturation;
-        // float _Lightness;
-
         Pass
         {
             CGPROGRAM
