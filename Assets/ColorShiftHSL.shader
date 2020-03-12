@@ -5,8 +5,8 @@
         _MainTex ("Texture", 2D) = "white" {}
 
         [IntRange] _Hue ("Hue", Range(-180, 180)) = 0
-        [IntRange] _Saturation("Saturation", range(-100, 100)) = 0
-        [IntRange] _Lightness("Lightness Shift", range(-100, 100)) = 0
+        [IntRange] _Saturation("Saturation", Range(-100, 100)) = 0
+        [IntRange] _Lightness("Lightness Shift", Range(-100, 100)) = 0
     }
     SubShader
     {
@@ -21,6 +21,7 @@
 
             #include "UnityCG.cginc"
             #include "ColorConversionLib.cginc"
+            #include "ColorAdjustmentLib.cginc"
 
             struct appdata
             {
@@ -40,36 +41,6 @@
             float _Hue;
             float _Saturation;
             float _Lightness;
-
-            // col, h, s, l is -1.0 to 1.0
-            float3 colorShift(float3 col, float h, float s, float l, float alpha = 1.0)
-            {
-                float3 adjColor = linear2rgb(col);
-                adjColor = rgb2hsl(adjColor);
-
-                adjColor.x = frac(adjColor.x + h);
-                adjColor.y = saturate(adjColor.y + s);
-                // adjColor.z = saturate(adjColor.z + l); // doesn't work as photoshop colorize
-
-                // https://stackoverflow.com/questions/4404507/algorithm-for-hue-saturation-adjustment-layer-from-photoshop
-                // w is 0 to 2
-                float w = l + 1.0;
-
-                if (w < 1.0) 
-                {
-                    adjColor.z = lerp(0.0, adjColor.z, w);
-                }
-                else    
-                {
-                    adjColor.z = lerp(adjColor.z, 1.0, w - 1.0);
-                }
-
-                adjColor = hsl2rgb(adjColor);
-
-                adjColor = rgb2linear(adjColor);
-
-                return lerp(col, adjColor, alpha);
-            }
 
             v2f vert (appdata v)
             {

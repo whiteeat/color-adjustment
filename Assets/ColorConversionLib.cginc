@@ -1,5 +1,5 @@
-#ifndef HSV_LIB
-#define HSV_LIB
+#ifndef COLOR_CONVERSION_LIB
+#define COLOR_CONVERSION_LIB
 
 // https://docs.unity3d.com/Packages/com.unity.shadergraph@6.9/manual/Colorspace-Conversion-Node.html
 float3 rgb2linear(float3 In)
@@ -43,7 +43,6 @@ float3 linear2rgb_ref(float3 linearRgb)
     return pow(linearRgb, 1 / 2.2);
 }
 
-
 // https://www.ronja-tutorials.com/2019/04/16/hsv-colorspace.html
 float3 hue2rgb(float hue) {
     hue = frac(hue); //only use fractional part
@@ -82,58 +81,89 @@ float3 rgb2hsvRef(float3 rgb)
     return float3(hue, saturation, value);
 }
 
-// This version is broken. Who can fix it? :)
-// https://www.shadertoy.com/view/lsS3Wc
-// float3 rgb2hsl(float3 col)
-// {
-//     float minc = min( col.r, min(col.g, col.b) );
-//     float maxc = max( col.r, max(col.g, col.b) );
-//     float3 mask = step(col.grr,col.rgb) * step(col.bbg,col.rgb);
-//     float E = 1e-10;
-//     float3 h = mask * (float3(0.0,2.0,4.0) + (col.gbr-col.brg)/(maxc-minc + E)) / 6.0;
-//     return float3( frac( 1.0 + h.x + h.y + h.z ),              // H
-//     (maxc-minc)/(1.0-abs(minc+maxc-1.0) + E),  // S
-//     (minc+maxc)*0.5 );                           // L
-// }
-
-float3 rgb2hsl(float3 c)
+// https://www.shadertoy.com/view/wt23Rt
+//RGB to HSL (hue, saturation, lightness/luminance).
+//Source: https://gist.github.com/yiwenl/745bfea7f04c456e0101
+float3 rgb2hslRef(float3 c)
 {
-    float h = 0.0;
-	float s = 0.0;
-	float l = 0.0;
-	float r = c.r;
-	float g = c.g;
-	float b = c.b;
-	float cMin = min( r, min( g, b ) );
-	float cMax = max( r, max( g, b ) );
-
-	l = ( cMax + cMin ) / 2.0;
-	if ( cMax > cMin ) {
-		float cDelta = cMax - cMin;
-        
-        //s = l < .05 ? cDelta / ( cMax + cMin ) : cDelta / ( 2.0 - ( cMax + cMin ) ); Original
-		s = l < .0 ? cDelta / ( cMax + cMin ) : cDelta / ( 2.0 - ( cMax + cMin ) );
-        
-		if ( r == cMax ) {
-			h = ( g - b ) / cDelta;
-		} else if ( g == cMax ) {
-			h = 2.0 + ( b - r ) / cDelta;
-		} else {
-			h = 4.0 + ( r - g ) / cDelta;
+	float cMin=min(min(c.r,c.g),c.b),
+	      cMax=max(max(c.r,c.g),c.b),
+	      delta=cMax-cMin;
+	float3 hsl=float3(0.,0.,(cMax+cMin)/2.);
+    float E = 1e-10;
+	if(delta > 0.0) //If it has chroma and isn't gray.
+    {
+		if(hsl.z<.5)
+        {
+			hsl.y = delta/(cMax+cMin); //Saturation.
 		}
-
-		if ( h < 0.0) {
-			h += 6.0;
+        else{
+			hsl.y = delta/(2.-cMax-cMin); //Saturation.
 		}
-		h = h / 6.0;
+		float deltaR=(((cMax-c.r)/6.)+(delta/2.))/delta,
+		      deltaG=(((cMax-c.g)/6.)+(delta/2.))/delta,
+		      deltaB=(((cMax-c.b)/6.)+(delta/2.))/delta;
+		//Hue.
+		if(cMax - c.r < E)
+        {
+			hsl.x=deltaB-deltaG;
+		}
+        else if(cMax - c.g < E)
+        {
+			hsl.x=(1./3.)+deltaR-deltaB;
+		}
+        else
+        { //if(c.b==cMax){
+			hsl.x=(2./3.)+deltaG-deltaR;
+		}
+		hsl.x=frac(hsl.x);
 	}
-	return float3( h, s, l );
+	return hsl;
 }
 
-float3 hsl2rgb(float3 c)
+float3 hsl2rgbRef(float3 hsl)
 {
-    float3 rgb = clamp( abs(fmod(c.x*6.0+float3(0.0,4.0,2.0),6.0)-3.0)-1.0, 0.0, 1.0 );
-    return c.z + c.y * (rgb-0.5)*(1.0-abs(2.0*c.z-1.0));
+    float E = 1e-10;
+	if(hsl.y < E){
+		return float3(hsl.z, hsl.z, hsl.z); //Luminance.
+	}else{
+		float b;
+		if(hsl.z<.5){
+			b=hsl.z*(1.+hsl.y);
+		}else{
+			b=hsl.z+hsl.y-hsl.y*hsl.z;
+		}
+		float a=2.*hsl.z-b;
+		return a+hue2rgb(hsl.x)*(b-a);
+	}
+}
+
+// http://www.chilliant.com/rgb2hsv.html
+float3 RGBtoHCV(in float3 RGB)
+{
+    float Epsilon = 1e-10;
+    // Based on work by Sam Hocevar and Emil Persson
+    float4 P = (RGB.g < RGB.b) ? float4(RGB.bg, -1.0, 2.0/3.0) : float4(RGB.gb, 0.0, -1.0/3.0);
+    float4 Q = (RGB.r < P.x) ? float4(P.xyw, RGB.r) : float4(RGB.r, P.yzx);
+    float C = Q.x - min(Q.w, Q.y);
+    float H = abs((Q.w - Q.y) / (6 * C + Epsilon) + Q.z);
+    return float3(H, C, Q.x);
+}
+
+float3 rgb2hsl(in float3 RGB)
+{
+    float Epsilon = 1e-10;
+    float3 HCV = RGBtoHCV(RGB);
+    float L = HCV.z - HCV.y * 0.5;
+    float S = HCV.y / (1 - abs(L * 2 - 1) + Epsilon);
+    return float3(HCV.x, S, L);
+}
+
+float3 hsl2rgb(in float3 HSL)
+{
+    float3 RGB = hue2rgb(HSL.x);
+    float C = (1 - abs(2 * HSL.z - 1)) * HSL.y;
+    return (RGB - 0.5) * C + HSL.z;
 }
 
 #endif
