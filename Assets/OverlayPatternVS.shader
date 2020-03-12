@@ -22,7 +22,7 @@
             #pragma vertex vert
             #pragma fragment frag
 
-            #pragma multi_compile_local __ ENABLE_MIRROR_PATTERN
+            #pragma shader_feature_local ENABLE_MIRROR_PATTERN
 
             #include "UnityCG.cginc"
             #include "ColorConversionLib.cginc"
